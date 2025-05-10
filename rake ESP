@@ -248,3 +248,22 @@ local title = createDrawing("Text", {
     Font = 2,
     Outline = true
 })
+
+-- Display the player's coordinates in the top left corner
+local coordsText = createDrawing("Text", {
+    Text = "Coordinates: 0, 0, 0",  -- Placeholder text, will update with actual coordinates
+    Position = Vector2.new(10, 30),  -- Positioning the coordinates below the title
+    Color = Color3.fromRGB(255, 255, 255),
+    Size = 14,
+    Font = 2,
+    Outline = true
+})
+
+-- Update coordinates in real-time
+RunService.RenderStepped:Connect(function()
+    local lpChar = LocalPlayer.Character
+    if lpChar and lpChar:FindFirstChild("HumanoidRootPart") then
+        local pos = lpChar.HumanoidRootPart.Position
+        coordsText.Text = string.format("Coordinates: %.2f, %.2f, %.2f", pos.X, pos.Y, pos.Z)
+    end
+end)

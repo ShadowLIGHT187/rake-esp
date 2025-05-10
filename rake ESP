@@ -1,0 +1,194 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+
+local ESPFolder = Instance.new("Folder", game.CoreGui)
+ESPFolder.Name = "CustomESP"
+
+local MAX_DISTANCE = 1000 -- render distance in studs
+
+-- COLORS
+local PLAYER_COLOR = Color3.fromRGB(0, 255, 0)
+local RAKE_COLOR = Color3.fromRGB(255, 0, 0)
+local SCRAP_COLOR = Color3.fromRGB(0, 150, 255)
+local FLARE_COLOR = Color3.fromRGB(255, 255, 0)
+
+-- UTILITY
+local function createDrawing(type, props)
+    local obj = Drawing.new(type)
+    for i, v in pairs(props) do
+        obj[i] = v
+    end
+    return obj
+end
+
+local ESPObjects = {}
+
+local function removeESP(name)
+    if ESPObjects[name] then
+        for _, obj in pairs(ESPObjects[name]) do
+            obj:Remove()
+        end
+        ESPObjects[name] = nil
+    end
+end
+
+-- RENDER LOOP
+RunService.RenderStepped:Connect(function()
+    local screenCenterX = Camera.ViewportSize.X / 2
+    local screenBottomY = Camera.ViewportSize.Y
+
+    for _, objs in pairs(ESPObjects) do
+        for _, obj in pairs(objs) do
+            obj.Visible = false
+        end
+    end
+
+    local lpChar = LocalPlayer.Character
+    if not lpChar or not lpChar:FindFirstChild("HumanoidRootPart") then return end
+    local lpPos = lpChar.HumanoidRootPart.Position
+
+    -- PLAYER ESP
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local part = player.Character.HumanoidRootPart
+            if (lpPos - part.Position).Magnitude <= MAX_DISTANCE then
+                local screenPos, visible = Camera:WorldToViewportPoint(part.Position)
+                if visible then
+                    if not ESPObjects[player.Name] then
+                        ESPObjects[player.Name] = {
+                            Name = createDrawing("Text", {
+                                Color = PLAYER_COLOR,
+                                Size = 13,
+                                Center = true,
+                                Outline = true,
+                                Font = 2
+                            }),
+                            Line = createDrawing("Line", {
+                                Color = PLAYER_COLOR,
+                                Thickness = 1
+                            })
+                        }
+                    end
+
+                    ESPObjects[player.Name].Name.Position = Vector2.new(screenPos.X, screenPos.Y - 15)
+                    ESPObjects[player.Name].Name.Text = player.Name
+                    ESPObjects[player.Name].Name.Visible = true
+
+                    ESPObjects[player.Name].Line.From = Vector2.new(screenCenterX, screenBottomY)
+                    ESPObjects[player.Name].Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                    ESPObjects[player.Name].Line.Visible = true
+                end
+            end
+        else
+            removeESP(player.Name)
+        end
+    end
+
+    -- RAKE ESP
+    local rake = workspace:FindFirstChild("The Rake")
+    if rake and rake:FindFirstChild("HumanoidRootPart") then
+        local part = rake.HumanoidRootPart
+        if (lpPos - part.Position).Magnitude <= MAX_DISTANCE then
+            local screenPos, visible = Camera:WorldToViewportPoint(part.Position)
+            if visible then
+                if not ESPObjects["RAKE"] then
+                    ESPObjects["RAKE"] = {
+                        Name = createDrawing("Text", {
+                            Color = RAKE_COLOR,
+                            Size = 14,
+                            Center = true,
+                            Outline = true,
+                            Font = 2
+                        }),
+                        Line = createDrawing("Line", {
+                            Color = RAKE_COLOR,
+                            Thickness = 2
+                        })
+                    }
+                end
+
+                ESPObjects["RAKE"].Name.Position = Vector2.new(screenPos.X, screenPos.Y - 15)
+                ESPObjects["RAKE"].Name.Text = "RAKE"
+                ESPObjects["RAKE"].Name.Visible = true
+
+                ESPObjects["RAKE"].Line.From = Vector2.new(screenCenterX, screenBottomY)
+                ESPObjects["RAKE"].Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                ESPObjects["RAKE"].Line.Visible = true
+            end
+        else
+            removeESP("RAKE")
+        end
+    end
+
+    -- SCRAP ESP
+    for _, scrap in ipairs(workspace:GetDescendants()) do
+        if scrap:IsA("BasePart") and scrap.Name:lower():find("scrap") then
+            if (lpPos - scrap.Position).Magnitude <= MAX_DISTANCE then
+                local screenPos, visible = Camera:WorldToViewportPoint(scrap.Position)
+                if visible then
+                    local id = "SCRAP_" .. scrap:GetDebugId()
+                    if not ESPObjects[id] then
+                        ESPObjects[id] = {
+                            Name = createDrawing("Text", {
+                                Color = SCRAP_COLOR,
+                                Size = 12,
+                                Center = true,
+                                Outline = true,
+                                Font = 2
+                            }),
+                            Line = createDrawing("Line", {
+                                Color = SCRAP_COLOR,
+                                Thickness = 1
+                            })
+                        }
+                    end
+
+                    ESPObjects[id].Name.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
+                    ESPObjects[id].Name.Text = "Scrap"
+                    ESPObjects[id].Name.Visible = true
+
+                    ESPObjects[id].Line.From = Vector2.new(screenCenterX, screenBottomY)
+                    ESPObjects[id].Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                    ESPObjects[id].Line.Visible = true
+                end
+            end
+        end
+    end
+
+    -- FLARE GUN ESP
+    for _, item in ipairs(workspace:GetDescendants()) do
+        if item:IsA("BasePart") and item.Name:lower():find("flare") then
+            if (lpPos - item.Position).Magnitude <= MAX_DISTANCE then
+                local screenPos, visible = Camera:WorldToViewportPoint(item.Position)
+                if visible then
+                    local id = "FLARE_" .. item:GetDebugId()
+                    if not ESPObjects[id] then
+                        ESPObjects[id] = {
+                            Name = createDrawing("Text", {
+                                Color = FLARE_COLOR,
+                                Size = 12,
+                                Center = true,
+                                Outline = true,
+                                Font = 2
+                            }),
+                            Line = createDrawing("Line", {
+                                Color = FLARE_COLOR,
+                                Thickness = 1
+                            })
+                        }
+                    end
+
+                    ESPObjects[id].Name.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
+                    ESPObjects[id].Name.Text = "Flare Gun"
+                    ESPObjects[id].Name.Visible = true
+
+                    ESPObjects[id].Line.From = Vector2.new(screenCenterX, screenBottomY)
+                    ESPObjects[id].Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                    ESPObjects[id].Line.Visible = true
+                end
+            end
+        end
+    end
+end)

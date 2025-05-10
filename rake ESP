@@ -356,15 +356,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Display 'MADE BY SHADOWLIGHT' in the top left corner
-local title = createDrawing("Text", {
-    Text = "MADE BY SHADOWLIGHT",
-    Position = Vector2.new(10, 10),
-    Color = Color3.fromRGB(255, 255, 255),
-    Size = 16,
-    Font = 2,
-    Outline = true
-})
 
 -- Display the player's coordinates in the top left corner
 local coordsText = createDrawing("Text", {

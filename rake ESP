@@ -268,3 +268,65 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ESP for static locations in The Rake: Remastered
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- Location table with names, positions, and colors
+local Locations = {
+    {Name = "Power Station", Position = Vector3.new(-281.63, 20.00, -211.49), Color = Color3.fromRGB(139, 69, 19)},
+    {Name = "Safe House", Position = Vector3.new(-365.18, 15.60, 64.76), Color = Color3.fromRGB(139, 69, 19)},
+    {Name = "Base Camp", Position = Vector3.new(-37.10, 17.61, 198.19), Color = Color3.fromRGB(139, 69, 19)},
+    {Name = "Observation Tower", Position = Vector3.new(53.41, 57.82, -51.60), Color = Color3.fromRGB(139, 69, 19)},
+    {Name = "Shop", Position = Vector3.new(-24.91, 16.91, -257.03), Color = Color3.fromRGB(139, 69, 19)},
+}
+
+-- Create ESP drawing objects for each location
+local ESPObjects = {}
+
+for _, location in ipairs(Locations) do
+    table.insert(ESPObjects, {
+        Name = location.Name,
+        Position = location.Position,
+        Color = location.Color,
+        Text = Drawing.new("Text"),
+        Line = Drawing.new("Line")
+    })
+end
+
+-- ESP loop to render the ESP elements
+RunService.RenderStepped:Connect(function()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    for _, obj in ipairs(ESPObjects) do
+        local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+        if onScreen then
+            local lineEnd = Vector2.new(screenPos.X, screenPos.Y)
+
+            -- Line from bottom center to location
+            obj.Line.Visible = true
+            obj.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            obj.Line.To = lineEnd
+            obj.Line.Color = obj.Color
+            obj.Line.Thickness = 1.5
+            obj.Line.Transparency = 1
+
+            -- Text at the end of the line
+            obj.Text.Visible = true
+            obj.Text.Text = obj.Name
+            obj.Text.Position = lineEnd + Vector2.new(0, -18) -- offset slightly above line end
+            obj.Text.Size = 16
+            obj.Text.Center = true
+            obj.Text.Outline = true
+            obj.Text.Color = obj.Color
+            obj.Text.OutlineColor = Color3.new(0, 0, 0)
+        else
+            obj.Text.Visible = false
+            obj.Line.Visible = false
+        end
+    end
+end)
+
+

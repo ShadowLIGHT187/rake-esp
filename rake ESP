@@ -268,65 +268,119 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP for static locations in The Rake: Remastered
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
--- Location table with names, positions, and colors
-local Locations = {
-    {Name = "Power Station", Position = Vector3.new(-281.63, 20.00, -211.49), Color = Color3.fromRGB(139, 69, 19)},
-    {Name = "Safe House", Position = Vector3.new(-365.18, 15.60, 64.76), Color = Color3.fromRGB(139, 69, 19)},
-    {Name = "Base Camp", Position = Vector3.new(-37.10, 17.61, 198.19), Color = Color3.fromRGB(139, 69, 19)},
-    {Name = "Observation Tower", Position = Vector3.new(53.41, 57.82, -51.60), Color = Color3.fromRGB(139, 69, 19)},
-    {Name = "Shop", Position = Vector3.new(-24.91, 16.91, -257.03), Color = Color3.fromRGB(139, 69, 19)},
+local ESPFolder = Instance.new("Folder", game.CoreGui)
+ESPFolder.Name = "CustomESP"
+
+local MAX_DISTANCE = 1000
+
+-- Colors
+local PLAYER_COLOR = Color3.fromRGB(0, 255, 0)
+local RAKE_COLOR = Color3.fromRGB(255, 0, 0)
+local SCRAP_COLOR = Color3.fromRGB(0, 150, 255)
+local FLARE_COLOR = Color3.fromRGB(255, 255, 0)
+local CRATE_COLOR = Color3.fromHSV(tick() * 5 % 1, 1, 1) -- RGB cycling for crates
+
+-- Locations
+local locations = {
+    ["Power Station"] = Vector3.new(-281.63, 20.00, -211.49),
+    ["Safe House"] = Vector3.new(-365.18, 15.60, 64.76),
+    ["Base Camp"] = Vector3.new(-37.10, 17.61, 198.19),
+    ["Observation Tower"] = Vector3.new(49.10, 57.82, -51.60),
+    ["Shop"] = Vector3.new(-24.91, 16.91, -257.03),
 }
 
--- Create ESP drawing objects for each location
-local ESPObjects = {}
-
-for _, location in ipairs(Locations) do
-    table.insert(ESPObjects, {
-        Name = location.Name,
-        Position = location.Position,
-        Color = location.Color,
-        Text = Drawing.new("Text"),
-        Line = Drawing.new("Line")
-    })
+-- Utility for creating ESP
+local function createDrawing(type, props)
+    local drawing = Drawing.new(type)
+    for k, v in pairs(props) do
+        drawing[k] = v
+    end
+    return drawing
 end
 
--- ESP loop to render the ESP elements
+local ESPObjects = {}
+
+local function removeESP(key)
+    if ESPObjects[key] then
+        for _, obj in pairs(ESPObjects[key]) do
+            obj:Remove()
+        end
+        ESPObjects[key] = nil
+    end
+end
+
+-- Update ESP for each location
 RunService.RenderStepped:Connect(function()
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+    local lpChar = LocalPlayer.Character
+    if not lpChar or not lpChar:FindFirstChild("HumanoidRootPart") then return end
+    local lpPos = lpChar.HumanoidRootPart.Position
 
-    for _, obj in ipairs(ESPObjects) do
-        local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
-        if onScreen then
-            local lineEnd = Vector2.new(screenPos.X, screenPos.Y)
+    for _, esp in pairs(ESPObjects) do
+        for _, obj in pairs(esp) do
+            obj.Visible = false
+        end
+    end
 
-            -- Line from bottom center to location
-            obj.Line.Visible = true
-            obj.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-            obj.Line.To = lineEnd
-            obj.Line.Color = obj.Color
-            obj.Line.Thickness = 1.5
-            obj.Line.Transparency = 1
-
-            -- Text at the end of the line
-            obj.Text.Visible = true
-            obj.Text.Text = obj.Name
-            obj.Text.Position = lineEnd + Vector2.new(0, -18) -- offset slightly above line end
-            obj.Text.Size = 16
-            obj.Text.Center = true
-            obj.Text.Outline = true
-            obj.Text.Color = obj.Color
-            obj.Text.OutlineColor = Color3.new(0, 0, 0)
-        else
-            obj.Text.Visible = false
-            obj.Line.Visible = false
+    -- Location ESP
+    for locationName, locationPos in pairs(locations) do
+        if (lpPos - locationPos).Magnitude <= MAX_DISTANCE then
+            local screenPos, visible = Camera:WorldToViewportPoint(locationPos)
+            local distance = math.floor((lpPos - locationPos).Magnitude)
+            if visible then
+                local id = "LOCATION_" .. locationName
+                if not ESPObjects[id] then
+                    ESPObjects[id] = {
+                        Name = createDrawing("Text", {Color = Color3.fromRGB(255, 255, 255), Size = 13, Center = true, Outline = true, Font = 2}),
+                        Line = createDrawing("Line", {Color = Color3.fromRGB(255, 255, 255), Thickness = 1}),
+                        Distance = createDrawing("Text", {Color = Color3.fromRGB(255, 255, 255), Size = 12, Center = true, Font = 2})
+                    }
+                end
+                ESPObjects[id].Name.Position = Vector2.new(screenPos.X, screenPos.Y - 15)
+                ESPObjects[id].Name.Text = locationName
+                ESPObjects[id].Name.Visible = true
+                ESPObjects[id].Line.From = screenCenter
+                ESPObjects[id].Line.To = Vector2.new(screenPos.X, screenPos.Y)
+                ESPObjects[id].Line.Visible = true
+                ESPObjects[id].Distance.Position = Vector2.new(screenPos.X, screenPos.Y + 10)
+                ESPObjects[id].Distance.Text = distance .. "m"
+                ESPObjects[id].Distance.Visible = true
+            end
         end
     end
 end)
 
+-- Display 'MADE BY SHADOWLIGHT' in the top left corner
+local title = createDrawing("Text", {
+    Text = "MADE BY SHADOWLIGHT",
+    Position = Vector2.new(10, 10),
+    Color = Color3.fromRGB(255, 255, 255),
+    Size = 16,
+    Font = 2,
+    Outline = true
+})
 
+-- Display the player's coordinates in the top left corner
+local coordsText = createDrawing("Text", {
+    Text = "Coordinates: 0, 0, 0",  -- Placeholder text, will update with actual coordinates
+    Position = Vector2.new(10, 30),  -- Positioning the coordinates below the title
+    Color = Color3.fromRGB(255, 255, 255),
+    Size = 14,
+    Font = 2,
+    Outline = true
+})
+
+-- Update coordinates in real-time
+RunService.RenderStepped:Connect(function()
+    local lpChar = LocalPlayer.Character
+    if lpChar and lpChar:FindFirstChild("HumanoidRootPart") then
+        local pos = lpChar.HumanoidRootPart.Position
+        coordsText.Text = string.format("Coordinates: %.2f, %.2f, %.2f", pos.X, pos.Y, pos.Z)
+    end
+end)
